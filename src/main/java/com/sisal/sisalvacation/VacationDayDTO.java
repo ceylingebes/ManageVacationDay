@@ -1,9 +1,12 @@
 package com.sisal.sisalvacation;
 
-import java.time.LocalDate;
+import jakarta.validation.constraints.NotBlank;
+
 
 public class VacationDayDTO {
+    @NotBlank
     private String date;
+    @NotBlank
     private String name;
 
     public String getDate() {
