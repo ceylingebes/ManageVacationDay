@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vacation Days Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        #vacationList {
+            list-style-type: none;
+            padding: 0;
+        }
+        .vacationItem {
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .deleteBtn {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .deleteBtn:hover {
+            background-color: #d32f2f;
+        }
+        .updateBtn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .updateBtn:hover {
+            background-color: #45a049;
+        }
+        .saveBtn {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .saveBtn:hover {
+            background-color: #1e87dc;
+        }
+    </style>
+</head>
+<body>
+<h1>Vacation Days</h1>
+<form id="vacationForm">
+    <label for="newVacationName">Name:</label>
+    <input type="text" id="newVacationName" required>
+    <label for="newVacationDate">Date:</label>
+    <input type="date" id="newVacationDate" required>
+    <button type="submit">Save</button>
+</form>
+<ul id="vacationList">
+    <li class="vacationItem">
+        <span><strong>Name</strong></span>
+        <span><strong>Date</strong></span>
+        <span><strong>Actions</strong></span>
+    </li>
+</ul>
+<div id="errorMessage" class="error"></div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('vacationForm');
+        const vacationList = document.getElementById('vacationList');
+        const errorMessage = document.getElementById('errorMessage');
+        let isUpdating = false;
+
+        const baseUrl = 'http://localhost:8080/eft/vacation-day';
+
+        // Function to display error messages
+        function displayError(message) {
+            errorMessage.textContent = message;
+            setTimeout(function() {
+                errorMessage.textContent = '';
+            }, 3000);
+        }
+
+        // Function to format date as yyyy-mm-dd
+        function formatDate(date) {
+            const year = date.getFullYear();
+            let month = date.getMonth() + 1;
+            if (month < 10) {
+                month = `0${month}`;
+            }
+            let day = date.getDate();
+            if (day < 10) {
+                day = `0${day}`;
+            }
+            return `${year}-${month}-${day}`;
+        }
+
+        // Function to fetch and display all vacation days
+        function getAllVacationDays() {
+            fetch(baseUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch vacation days');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    vacationList.innerHTML = ''; // Clear existing list
+                    const headerItem = document.createElement('li');
+                    headerItem.classList.add('vacationItem');
+                    headerItem.innerHTML = `
+                        <span><strong>Name</strong></span>
+                        <span><strong>Date</strong></span>
+                        <span><strong>Actions</strong></span>
+                    `;
+                    vacationList.appendChild(headerItem);
+                    data.forEach(vacationDay => {
+                        const listItem = document.createElement('li');
+                        listItem.classList.add('vacationItem');
+                        listItem.innerHTML = `
+                            <span>${vacationDay.name}</span>
+                            <span>${formatDate(new Date(vacationDay.date))}</span>
+                            <span>
+                                <button class="deleteBtn" data-id="${vacationDay.id}">Delete</button>
+                                <button class="updateBtn" data-id="${vacationDay.id}">Update</button>
+                            </span>
+                        `;
+                        vacationList.appendChild(listItem);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching vacation days:', error);
+                    displayError('Failed to fetch vacation days. Please try again later.');
+                });
+        }
+
+        // Call getAllVacationDays when the page loads
+        getAllVacationDays();
+
+        // Event listener for form submission
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const newName = document.getElementById('newVacationName').value;
+            const newDate = document.getElementById('newVacationDate').value;
+
+            // Create new vacation day object
+            const newVacationDay = {
+                name: newName,
+                date: newDate // Date format is already correct for the API
+            };
+
+            // POST request to create a new vacation day
+            fetch(baseUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(newVacationDay)
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to create new vacation day');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Refresh the list after creating a new vacation day
+                    getAllVacationDays();
+                })
+                .catch(error => displayError(error.message));
+
+            // Clear input fields
+            document.getElementById('newVacationName').value = '';
+            document.getElementById('newVacationDate').value = '';
+        });
+
+        // Event listener for delete and update buttons (event delegation)
+        vacationList.addEventListener('click', function(event) {
+            const vacationId = event.target.getAttribute('data-id');
+            if (event.target.classList.contains('deleteBtn')) {
+                // DELETE request to delete the vacation day
+                fetch(`${baseUrl}/${vacationId}`, {
+                    method: 'DELETE'
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            // Refresh the list after deleting the vacation day
+                            getAllVacationDays();
+                        } else {
+                            throw new Error('Failed to delete vacation day');
+                        }
+                    })
+                    .catch(error => displayError(error.message));
+            } else if (event.target.classList.contains('updateBtn')) {
+                const listItem = event.target.closest('.vacationItem');
+                if (!isUpdating) {
+                    // Toggle between text and input fields for editing
+                    const nameElement = listItem.querySelector('span:nth-child(1)');
+                    const dateElement = listItem.querySelector('span:nth-child(2)');
+                    const name = nameElement.textContent;
+                    const date = dateElement.textContent;
+                    nameElement.innerHTML = `<input type="text" class="vacationName" value="${name}">`;
+                    dateElement.innerHTML = `<input type="date" class="vacationDate" value="${date}">`;
+                    event.target.textContent = 'Save';
+                    isUpdating = true;
+                } else {
+                    const updatedName = listItem.querySelector('.vacationName').value;
+                    const updatedDate = listItem.querySelector('.vacationDate').value;
+                    // PUT request to update the vacation day
+                    const updatedVacationDay = {
+                        name: updatedName,
+                        date: updatedDate
+                    };
+                    fetch(`${baseUrl}/${vacationId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(updatedVacationDay)
+                    })
+                        .then(response => {
+                            if (response.ok) {
+                                // Refresh the list after updating the vacation day
+                                getAllVacationDays();
+                                event.target.textContent = 'Update';
+                            } else {
+                                throw new Error('Failed to update vacation day');
+                            }
+                        })
+                        .catch(error => displayError(error.message));
+                    isUpdating = false;
+                }
+            }
+        });
+    });
+</script>
+</body>
+</html>
