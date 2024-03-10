@@ -7,8 +7,69 @@
     <style>
         body {
             font-family: Arial, sans-serif;
+            background-color: #4d9264;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            position: relative;
         }
+        #container {
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 1000px;
+            position: relative;
+            z-index: 1; /* Ensure the table container is above the logo */
+        }
+
         #vacationList {
+            max-height: 400px; /* Adjust height as needed */
+            overflow-y: auto; /* Enable vertical scroll if content exceeds container height */
+        }
+        #header {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #e5261e;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        label {
+            font-weight: bold;
+            color: #04643c;
+        }
+        input[type="text"],
+        input[type="date"],
+        button {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus,
+        input[type="date"]:focus,
+        button:focus {
+            outline: none;
+            border-color: #bcd535;
+        }
+        button {
+            background-color: #78ae5c;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            width: 80px; /* Adjusted width for the save button */
+        }
+        button:hover {
+            background-color: #5d9046; /* Updated color for hover */
+        }
+        ul {
             list-style-type: none;
             padding: 0;
         }
@@ -20,61 +81,81 @@
             justify-content: space-between;
             align-items: center;
         }
-        .deleteBtn {
-            background-color: #f44336;
-            color: white;
-            border: none;
+
+        .vacationItem span:nth-child(1) {
+            width: 200px; /* Fixed width for the Name column */
+        }
+
+        .vacationItem span:nth-child(2) {
+            width: 120px; /* Fixed width for the Date column */
+            display: block;
+            justify-content: left; /* Center align the date */
+        }
+
+        .deleteBtn,
+        .updateBtn {
             padding: 5px 10px;
+            border-radius: 5px;
+            border: none;
             cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .deleteBtn {
+            background-color: #e5261e; /* Updated color */
+            color: white;
         }
         .deleteBtn:hover {
-            background-color: #d32f2f;
+            background-color: #c51e18; /* Darker shade */
         }
-        .updateBtn {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            cursor: pointer;
+        .icon {
+            position: absolute;
+            top: 20px; /* Adjust the distance from the top */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: auto;
+            z-index: 0; /* Ensure the logo is behind the table container */
         }
-        .updateBtn:hover {
-            background-color: #45a049;
+        .response {
+            color: #04643c; /* Response message color */
+            margin-top: 10px;
+            text-align: center;
         }
-        .saveBtn {
-            background-color: #2196F3;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            cursor: pointer;
-        }
-        .saveBtn:hover {
-            background-color: #1e87dc;
+        .error {
+            color: #e5261e; /* Error message color */
+            margin-top: 10px;
+            text-align: center;
         }
     </style>
 </head>
 <body>
-<h1>Vacation Days</h1>
-<form id="vacationForm">
-    <label for="newVacationName">Name:</label>
-    <input type="text" id="newVacationName" required>
-    <label for="newVacationDate">Date:</label>
-    <input type="date" id="newVacationDate" required>
-    <button type="submit">Save</button>
-</form>
-<ul id="vacationList">
-    <li class="vacationItem">
-        <span><strong>Name</strong></span>
-        <span><strong>Date</strong></span>
-        <span><strong>Actions</strong></span>
-    </li>
-</ul>
-<div id="errorMessage" class="error"></div>
+<img src="Sisal_Şans_logo.png" alt="Icon" class="icon">
+<div id="container">
+    <h1 id="header">Vacation Days</h1>
+    <form id="vacationForm">
+        <label for="newVacationName">Name:</label>
+        <input type="text" id="newVacationName" required>
+        <label for="newVacationDate">Date:</label>
+        <input type="date" id="newVacationDate" required maxlength="8">
+        <button type="submit">Save</button>
+    </form>
+    <ul id="vacationList">
+        <li class="vacationItem">
+            <span><strong style="color: #04643c;">Name</strong></span>
+            <span><strong style="color: #04643c;">Date</strong></span>
+            <span><strong style="color: #04643c;">Actions</strong></span>
+        </li>
+    </ul>
+    <div id="errorMessage" class="error"></div>
+    <div id="responseMessage" class="response"></div>
+</div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.getElementById('vacationForm');
         const vacationList = document.getElementById('vacationList');
         const errorMessage = document.getElementById('errorMessage');
+        const responseMessage = document.getElementById('responseMessage');
         let isUpdating = false;
 
         const baseUrl = 'http://localhost:8080/eft/vacation-day';
@@ -84,6 +165,14 @@
             errorMessage.textContent = message;
             setTimeout(function() {
                 errorMessage.textContent = '';
+            }, 3000);
+        }
+
+        // Function to display response messages
+        function displayResponse(message) {
+            responseMessage.textContent = message;
+            setTimeout(function() {
+                responseMessage.textContent = '';
             }, 3000);
         }
 
@@ -106,37 +195,36 @@
             fetch(baseUrl)
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error('Failed to fetch vacation days');
+                        throw new Error(response.statusText);
                     }
                     return response.json();
                 })
                 .then(data => {
+                    // Sort the vacation days by date
+                    data.sort((a, b) => new Date(a.date) - new Date(b.date));
+
                     vacationList.innerHTML = ''; // Clear existing list
                     const headerItem = document.createElement('li');
                     headerItem.classList.add('vacationItem');
-                    headerItem.innerHTML = `
-                        <span><strong>Name</strong></span>
-                        <span><strong>Date</strong></span>
-                        <span><strong>Actions</strong></span>
-                    `;
+                    headerItem.innerHTML = `<span><strong style="color: #04643c;">Name</strong></span>
+                    <span><strong style="color: #04643c;">Date</strong></span>
+                    <span><strong style="color: #04643c;">Actions</strong></span>`;
                     vacationList.appendChild(headerItem);
                     data.forEach(vacationDay => {
                         const listItem = document.createElement('li');
                         listItem.classList.add('vacationItem');
-                        listItem.innerHTML = `
-                            <span>${vacationDay.name}</span>
-                            <span>${formatDate(new Date(vacationDay.date))}</span>
-                            <span>
-                                <button class="deleteBtn" data-id="${vacationDay.id}">Delete</button>
-                                <button class="updateBtn" data-id="${vacationDay.id}">Update</button>
-                            </span>
-                        `;
+                        listItem.innerHTML = `<span>${vacationDay.name}</span>
+                        <span>${formatDate(new Date(vacationDay.date))}</span>
+                        <span>
+                            <button class="deleteBtn" data-id="${vacationDay.id}">Delete</button>
+                            <button class="updateBtn" data-id="${vacationDay.id}">Update</button>
+                        </span>`;
                         vacationList.appendChild(listItem);
                     });
                 })
                 .catch(error => {
-                    console.error('Error fetching vacation days:', error);
-                    displayError('Failed to fetch vacation days. Please try again later.');
+                    console.error(error);
+                    displayError(error.message);
                 });
         }
 
@@ -165,15 +253,20 @@
             })
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error('Failed to create new vacation day');
+                        throw new Error(response.statusText);
                     }
                     return response.json();
                 })
                 .then(data => {
                     // Refresh the list after creating a new vacation day
                     getAllVacationDays();
+                    displayResponse('Vacation day added successfully.');
+                    console.log('Vacation day added successfully.')
                 })
-                .catch(error => displayError(error.message));
+                .catch(error => {
+                    console.error(error);
+                    displayError(error.message);
+                });
 
             // Clear input fields
             document.getElementById('newVacationName').value = '';
@@ -192,11 +285,18 @@
                         if (response.ok) {
                             // Refresh the list after deleting the vacation day
                             getAllVacationDays();
+                            displayResponse('Vacation day deleted successfully.');
+                            console.log('Vacation day deleted successfully.');
+                        } else if (response.status === 400) {
+                            throw new Error('Invalid request payload.');
                         } else {
-                            throw new Error('Failed to delete vacation day');
+                            throw new Error('Failed to update vacation day.');
                         }
                     })
-                    .catch(error => displayError(error.message));
+                    .catch(error => {
+                        console.error(error);
+                        displayError(error.message);
+                    });
             } else if (event.target.classList.contains('updateBtn')) {
                 const listItem = event.target.closest('.vacationItem');
                 if (!isUpdating) {
@@ -229,16 +329,25 @@
                                 // Refresh the list after updating the vacation day
                                 getAllVacationDays();
                                 event.target.textContent = 'Update';
+                                displayResponse('Vacation day updated successfully.');
+                                console.log('Vacation day updated successfully.');
+                            } else if (response.status === 400) {
+                                throw new Error('Invalid request payload.');
                             } else {
                                 throw new Error('Failed to update vacation day');
                             }
                         })
-                        .catch(error => displayError(error.message));
+                        .catch(error => {
+                            console.error(error);
+                            displayError(error.message);
+                        });
                     isUpdating = false;
                 }
             }
+
         });
     });
+
 </script>
 </body>
 </html>
