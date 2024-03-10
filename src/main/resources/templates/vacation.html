@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vacation Days Management</title>
+
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -23,17 +24,17 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             width: 1000px;
             position: relative;
-            z-index: 1; /* Ensure the table container is above the logo */
-        }
-
-        #vacationList {
-            max-height: 400px; /* Adjust height as needed */
-            overflow-y: auto; /* Enable vertical scroll if content exceeds container height */
+            z-index: 1;
         }
         #header {
             text-align: center;
             margin-bottom: 20px;
             color: #e5261e;
+        }
+        #vacationList {
+            max-height: 420px;
+            overflow-y: auto;
+            margin-top: 10px;
         }
         form {
             display: flex;
@@ -64,14 +65,26 @@
             color: white;
             cursor: pointer;
             transition: background-color 0.3s;
-            width: 80px; /* Adjusted width for the save button */
+            width: 80px;
         }
         button:hover {
-            background-color: #5d9046; /* Updated color for hover */
+            background-color: #5d9046;
         }
         ul {
             list-style-type: none;
             padding: 0;
+        }
+        .headerContainer {
+            color: #04643c;
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .headerContainer span {
+            width: 80px; /* Adjust the width to match the columns in the list */
         }
         .vacationItem {
             margin-bottom: 10px;
@@ -81,17 +94,14 @@
             justify-content: space-between;
             align-items: center;
         }
-
         .vacationItem span:nth-child(1) {
-            width: 200px; /* Fixed width for the Name column */
+            width: 200px;
         }
-
         .vacationItem span:nth-child(2) {
-            width: 120px; /* Fixed width for the Date column */
+            width: 120px;
             display: block;
-            justify-content: left; /* Center align the date */
+            justify-content: left;
         }
-
         .deleteBtn,
         .updateBtn {
             padding: 5px 10px;
@@ -101,28 +111,28 @@
             transition: background-color 0.3s;
         }
         .deleteBtn {
-            background-color: #e5261e; /* Updated color */
+            background-color: #e5261e;
             color: white;
         }
         .deleteBtn:hover {
-            background-color: #c51e18; /* Darker shade */
+            background-color: #c51e18;
         }
         .icon {
             position: absolute;
-            top: 20px; /* Adjust the distance from the top */
+            top: 20px;
             left: 50%;
             transform: translateX(-50%);
             width: 200px;
             height: auto;
-            z-index: 0; /* Ensure the logo is behind the table container */
+            z-index: 0;
         }
         .response {
-            color: #04643c; /* Response message color */
+            color: #04643c;
             margin-top: 10px;
             text-align: center;
         }
         .error {
-            color: #e5261e; /* Error message color */
+            color: #e5261e;
             margin-top: 10px;
             text-align: center;
         }
@@ -136,14 +146,19 @@
         <label for="newVacationName">Name:</label>
         <input type="text" id="newVacationName" required>
         <label for="newVacationDate">Date:</label>
-        <input type="date" id="newVacationDate" required maxlength="8">
+        <input type="date" id="newVacationDate" required placeholder="yyyy-mm-dd">
         <button type="submit">Save</button>
     </form>
+    <div class="headerContainer">
+        <span><strong>Name</strong></span>
+        <span><strong>Date</strong></span>
+        <span><strong>Actions</strong></span>
+    </div>
     <ul id="vacationList">
         <li class="vacationItem">
-            <span><strong style="color: #04643c;">Name</strong></span>
-            <span><strong style="color: #04643c;">Date</strong></span>
-            <span><strong style="color: #04643c;">Actions</strong></span>
+            <span><strong>Name</strong></span>
+            <span><strong>Date</strong></span>
+            <span><strong>Actions</strong></span>
         </li>
     </ul>
     <div id="errorMessage" class="error"></div>
@@ -160,7 +175,6 @@
 
         const baseUrl = 'http://localhost:8080/eft/vacation-day';
 
-        // Function to display error messages
         function displayError(message) {
             errorMessage.textContent = message;
             setTimeout(function() {
@@ -168,7 +182,6 @@
             }, 3000);
         }
 
-        // Function to display response messages
         function displayResponse(message) {
             responseMessage.textContent = message;
             setTimeout(function() {
@@ -176,7 +189,6 @@
             }, 3000);
         }
 
-        // Function to format date as yyyy-mm-dd
         function formatDate(date) {
             const year = date.getFullYear();
             let month = date.getMonth() + 1;
@@ -190,7 +202,6 @@
             return `${year}-${month}-${day}`;
         }
 
-        // Function to fetch and display all vacation days
         function getAllVacationDays() {
             fetch(baseUrl)
                 .then(response => {
@@ -200,25 +211,35 @@
                     return response.json();
                 })
                 .then(data => {
-                    // Sort the vacation days by date
+                    //console.log(data);
                     data.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-                    vacationList.innerHTML = ''; // Clear existing list
-                    const headerItem = document.createElement('li');
-                    headerItem.classList.add('vacationItem');
-                    headerItem.innerHTML = `<span><strong style="color: #04643c;">Name</strong></span>
-                    <span><strong style="color: #04643c;">Date</strong></span>
-                    <span><strong style="color: #04643c;">Actions</strong></span>`;
-                    vacationList.appendChild(headerItem);
+                    vacationList.innerHTML = '';
+                    const today = new Date();
+                    let nextUpcomingSet = false; // Flag to check if the next upcoming vacation is set
+
                     data.forEach(vacationDay => {
+                        const vacationDate = new Date(vacationDay.date);
                         const listItem = document.createElement('li');
                         listItem.classList.add('vacationItem');
+
+                        // Highlight past vacations
+                        if (vacationDate < today) {
+                            listItem.style.backgroundColor = '#b8b8b8';
+                        }
+
+                        // Highlight the next upcoming vacation
+                        if (!nextUpcomingSet && vacationDate >= today) {
+                            listItem.style.backgroundColor = '#d0f0c0'; // Set a subtle catch background color
+                            nextUpcomingSet = true; // Set the flag to true so only the first upcoming vacation is highlighted
+                        }
+
                         listItem.innerHTML = `<span>${vacationDay.name}</span>
-                        <span>${formatDate(new Date(vacationDay.date))}</span>
-                        <span>
-                            <button class="deleteBtn" data-id="${vacationDay.id}">Delete</button>
-                            <button class="updateBtn" data-id="${vacationDay.id}">Update</button>
-                        </span>`;
+                <span>${formatDate(vacationDate)}</span>
+                <span>
+                    <button class="deleteBtn" data-id="${vacationDay.id}">Delete</button>
+                    <button class="updateBtn" data-id="${vacationDay.id}">Update</button>
+                </span>`;
                         vacationList.appendChild(listItem);
                     });
                 })
@@ -228,22 +249,18 @@
                 });
         }
 
-        // Call getAllVacationDays when the page loads
         getAllVacationDays();
 
-        // Event listener for form submission
         form.addEventListener('submit', function(event) {
             event.preventDefault();
             const newName = document.getElementById('newVacationName').value;
             const newDate = document.getElementById('newVacationDate').value;
 
-            // Create new vacation day object
             const newVacationDay = {
                 name: newName,
-                date: newDate // Date format is already correct for the API
+                date: newDate
             };
 
-            // POST request to create a new vacation day
             fetch(baseUrl, {
                 method: 'POST',
                 headers: {
@@ -253,37 +270,46 @@
             })
                 .then(response => {
                     if (!response.ok) {
-                        throw new Error(response.statusText);
+                        throw new Error("Failed to create new vacation day. Please check date format.");
                     }
                     return response.json();
                 })
                 .then(data => {
-                    // Refresh the list after creating a new vacation day
+                    console.log(data);
                     getAllVacationDays();
                     displayResponse('Vacation day added successfully.');
-                    console.log('Vacation day added successfully.')
                 })
                 .catch(error => {
                     console.error(error);
                     displayError(error.message);
                 });
 
-            // Clear input fields
             document.getElementById('newVacationName').value = '';
             document.getElementById('newVacationDate').value = '';
         });
 
-        // Event listener for delete and update buttons (event delegation)
         vacationList.addEventListener('click', function(event) {
             const vacationId = event.target.getAttribute('data-id');
-            if (event.target.classList.contains('deleteBtn')) {
+            const listItem = event.target.closest('.vacationItem');
+            const nameElement = listItem.querySelector('span:nth-child(1)');
+            const dateElement = listItem.querySelector('span:nth-child(2)');
+            const updateBtn = listItem.querySelector('.updateBtn');
+            const deleteBtn = listItem.querySelector('.deleteBtn');
+
+            if (event.target.classList.contains('deleteBtn') && deleteBtn.textContent === 'Cancel') {
+                // Discard changes and return to view mode
+                nameElement.innerHTML = nameElement.querySelector('.vacationName').defaultValue;
+                dateElement.innerHTML = dateElement.querySelector('.vacationDate').defaultValue;
+                updateBtn.textContent = 'Update';
+                deleteBtn.textContent = 'Delete';
+                isUpdating = false;
+            } else if (event.target.classList.contains('deleteBtn')) {
                 // DELETE request to delete the vacation day
                 fetch(`${baseUrl}/${vacationId}`, {
                     method: 'DELETE'
                 })
                     .then(response => {
                         if (response.ok) {
-                            // Refresh the list after deleting the vacation day
                             getAllVacationDays();
                             displayResponse('Vacation day deleted successfully.');
                             console.log('Vacation day deleted successfully.');
@@ -298,21 +324,17 @@
                         displayError(error.message);
                     });
             } else if (event.target.classList.contains('updateBtn')) {
-                const listItem = event.target.closest('.vacationItem');
                 if (!isUpdating) {
-                    // Toggle between text and input fields for editing
-                    const nameElement = listItem.querySelector('span:nth-child(1)');
-                    const dateElement = listItem.querySelector('span:nth-child(2)');
-                    const name = nameElement.textContent;
-                    const date = dateElement.textContent;
-                    nameElement.innerHTML = `<input type="text" class="vacationName" value="${name}">`;
-                    dateElement.innerHTML = `<input type="date" class="vacationDate" value="${date}">`;
-                    event.target.textContent = 'Save';
+                    // Enter update mode
+                    nameElement.innerHTML = `<input type="text" class="vacationName" value="${nameElement.textContent}" defaultValue="${nameElement.textContent}">`;
+                    dateElement.innerHTML = `<input type="date" class="vacationDate" value="${dateElement.textContent}" defaultValue="${dateElement.textContent}">`;
+                    updateBtn.textContent = 'Save';
+                    deleteBtn.textContent = 'Cancel';
                     isUpdating = true;
                 } else {
+                    // Save changes
                     const updatedName = listItem.querySelector('.vacationName').value;
                     const updatedDate = listItem.querySelector('.vacationDate').value;
-                    // PUT request to update the vacation day
                     const updatedVacationDay = {
                         name: updatedName,
                         date: updatedDate
@@ -326,9 +348,7 @@
                     })
                         .then(response => {
                             if (response.ok) {
-                                // Refresh the list after updating the vacation day
                                 getAllVacationDays();
-                                event.target.textContent = 'Update';
                                 displayResponse('Vacation day updated successfully.');
                                 console.log('Vacation day updated successfully.');
                             } else if (response.status === 400) {
@@ -344,10 +364,8 @@
                     isUpdating = false;
                 }
             }
-
         });
     });
-
 </script>
 </body>
 </html>
